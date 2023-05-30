@@ -110,16 +110,18 @@ select cus_name, cus_city, o.ORD_AMOUNT, o.pricing_id, s.PRO_ID, p.PRO_NAME, p.P
         having num_of_products > 1;
         
  7.Find the least expensive product from each category and print the table with category id, name, product name and price of the product
+ 
  SELECT c.CAT_ID, c.CAT_NAME, p.PRO_NAME, sp.SUPP_PRICE
 FROM Category c
 INNER JOIN (
-    SELECT p.CAT_ID, p.PRO_ID, p.PRO_NAME, MIN(sp.SUPP_PRICE) AS min_price
+    SELECT p.CAT_ID, MIN(sp.SUPP_PRICE) AS min_price
     FROM Product p
     INNER JOIN Supplier_pricing sp ON p.PRO_ID = sp.PRO_ID
-    GROUP BY p.CAT_ID, p.PRO_ID, p.PRO_NAME
+    GROUP BY p.CAT_ID
 ) AS sub ON c.CAT_ID = sub.CAT_ID
-INNER JOIN Product p ON sub.PRO_ID = p.PRO_ID
-INNER JOIN Supplier_pricing sp ON sub.PRO_ID = sp.PRO_ID AND sub.min_price = sp.SUPP_PRICE;
+INNER JOIN Product p ON sub.CAT_ID = p.CAT_ID
+INNER JOIN Supplier_pricing sp ON p.PRO_ID = sp.PRO_ID AND sub.min_price = sp.SUPP_PRICE;
+ 
 
 8.Display the Id and Name of the Product ordered after “2021-10-05”
   select c.cus_name, o.ord_amount, o.ord_date, p.pro_name, p.PRO_DESC  from orders as o inner join supplier_pricing as sp 
@@ -136,9 +138,31 @@ select customer.cus_name,customer.cus_gender from customer where customer.cus_na
 Type_of_Service. For Type_of_Service, If rating =5, print “Excellent Service”,If rating >4 print “Good Service”, If rating >2 print “Average
 Service” else print “Poor Service”. Note that there should be one rating per supplier
 
-select orders.pricing_id, avg(rating.RAT_RATSTARTS) as rating, case 
-when avg(rating.RAT_RATSTARTS)=5 then 'Excellent Service'
-when avg(rating.RAT_RATSTARTS)>4 then 'Good Service'
-when avg(rating.RAT_RATSTARTS)>2 then 'Average Service'
-else 'Poor Service' end as Type_of_Service from orders 
-inner join rating where orders.ORD_ID=rating.ORD_ID group by orders.PRICING_ID;
+DELIMITER //
+CREATE PROCEDURE DisplaySupplierRating()
+BEGIN
+  SELECT 
+    s.SUPP_ID, 
+    s.SUPP_NAME, 
+    AVG(r.RAT_RATSTARTS) AS Rating,
+    CASE
+      WHEN AVG(r.RAT_RATSTARTS) = 5 THEN 'Excellent Service'
+      WHEN AVG(r.RAT_RATSTARTS) > 4 THEN 'Good Service'
+      WHEN AVG(r.RAT_RATSTARTS) > 2 THEN 'Average Service'
+      ELSE 'Poor Service'
+    END AS Type_of_Service
+  FROM 
+    Supplier AS s
+    JOIN Supplier_pricing AS sp ON s.SUPP_ID = sp.SUPP_ID
+    JOIN orders AS o ON sp.PRICING_ID = o.PRICING_ID
+    JOIN Rating AS r ON o.ORD_ID = r.ORD_ID
+  GROUP BY 
+    s.SUPP_ID, 
+    s.SUPP_NAME;
+END //
+DELIMITER ;
+
+
+
+CALL DisplaySupplierRating();
+
